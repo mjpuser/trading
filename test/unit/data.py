@@ -1,0 +1,20 @@
+# sinusoidal-ish wave
+data = [
+    { 'change': 0, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+    { 'change': 0, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 0, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+    { 'change': 0, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 1, 'action': None, 'return': None },
+    { 'change': 0, 'action': None, 'return': None },
+    { 'change': -1, 'action': None, 'return': None },
+]
