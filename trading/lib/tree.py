@@ -22,6 +22,14 @@ class Node(object):
     def is_leaf(self):
         return len(self.children) == 0
 
+    def path(self):
+        path = []
+        node = self
+        while node is not None:
+            path.insert(0, node)
+            node = node.parent
+        return tuple(path)
+
 
 class Tree(Node):
 
@@ -41,11 +49,10 @@ class Searcher:
             for child in self.search(child):
                 yield child
 
-    def paths(self, node):
-        for child in self.search(node):
-            if child.is_leaf():
-                path = []
-                while child is not None:
-                    path.insert(0, child)
-                    child = child.parent
-                yield tuple(path)
+    def leafs_at(self, node, level=1):
+        if level == 1 and node.is_leaf():
+            yield node
+        elif level > 1:
+            for child in node.children:
+                for leaf in self.leafs_at(child, level - 1):
+                    yield leaf

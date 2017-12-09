@@ -37,6 +37,12 @@ class TreeTestCase(unittest.TestCase):
         node.add_child(node)
         self.assertFalse(node.is_leaf())
 
+    def test_node_path(self):
+        value = 'test'
+        node = trading.lib.tree.Node(value)
+        self.tree.add_child(node)
+        self.assertEquals((self.tree, node,), node.path())
+
     def test_only_accept_child_node_type(self):
         value = None
         with self.assertRaises(ValueError) as context:
@@ -77,12 +83,12 @@ class TreeTraverseTestCase(unittest.TestCase):
 
     def build_tree(self):
         #               1
-        #          /        \
-        #      2               6
+        #          /   /     \
+        #      2      6       7
         #    /   \         /   \    \
-        #  3      4      7       9    10
+        #  3      4      8      10   11
         #        /        \
-        #       5          8
+        #       5          9
         structure = {
             'value': 1,
             'children': [
@@ -92,12 +98,13 @@ class TreeTraverseTestCase(unittest.TestCase):
                         { 'value': 5 }
                     ] }
                 ] },
-                { 'value': 6, 'children': [
-                    { 'value': 7, 'children': [
-                        { 'value': 8 }
+                { 'value': 6 },
+                { 'value': 7, 'children': [
+                    { 'value': 8, 'children': [
+                        { 'value': 9 }
                     ] },
-                    { 'value': 9 },
-                    { 'value': 10 }
+                    { 'value': 10 },
+                    { 'value': 11 }
                 ] }
             ]
         }
@@ -107,16 +114,24 @@ class TreeTraverseTestCase(unittest.TestCase):
     def test_depth_first_search(self):
         tree = self.build_tree()
         results = [ x.value for x in self.searcher.search(tree) ]
-        self.assertEquals(results, [ x for x in range(1, 11) ])
+        self.assertEquals(results, [ x for x in range(1, 12) ])
 
-    def test_option_to_emit_paths(self):
+    def test_leafs_at(self):
+        tree = self.build_tree()
+        paths = [
+            3,
+            10,
+            11,
+        ]
+        results = [ node.value for node in self.searcher.leafs_at(tree, 3) ]
+        self.assertEquals(results, paths)
+
+    def test_leafs_at_with_paths(self):
         tree = self.build_tree()
         paths = [
             (1, 2, 3,),
-            (1, 2, 4, 5,),
-            (1, 6, 7, 8,),
-            (1, 6, 9,),
-            (1, 6, 10,),
+            (1, 7, 10,),
+            (1, 7, 11,),
         ]
-        results = [ tuple(map(lambda x: x.value, x)) for x in self.searcher.paths(tree) ]
+        results = [ tuple(map(lambda x: x.value, node.path())) for node in self.searcher.leafs_at(tree, 3) ]
         self.assertEquals(results, paths)
