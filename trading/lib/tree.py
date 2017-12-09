@@ -43,16 +43,22 @@ class Tree(Node):
 
 class Searcher:
 
-    def search(self, node):
-        yield node
-        for child in node.children:
-            for child in self.search(child):
-                yield child
+    @staticmethod
+    def search(node, value, max=None):
+        if max > 0 or max is None:
+            if max > 0:
+                max = max - 1
+            if node.value == value:
+                yield node
+            for child in node.children:
+                for node in Searcher.search(child, value, max):
+                    yield node
 
-    def leafs_at(self, node, level=1):
+    @staticmethod
+    def leafs_at(node, level=1):
         if level == 1 and node.is_leaf():
             yield node
         elif level > 1:
             for child in node.children:
-                for leaf in self.leafs_at(child, level - 1):
+                for leaf in Searcher.leafs_at(child, level - 1):
                     yield leaf

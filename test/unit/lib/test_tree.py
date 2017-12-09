@@ -1,6 +1,8 @@
 import unittest
 import trading.lib.tree
 
+Searcher = trading.lib.tree.Searcher
+
 
 class TreeTestCase(unittest.TestCase):
 
@@ -78,8 +80,7 @@ class TreeTestCase(unittest.TestCase):
 class TreeTraverseTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.searcher = trading.lib.tree.Searcher()
-        self.tree = trading.lib.tree.Tree()
+        self.tree = self.build_tree()
 
     def build_tree(self):
         #               1
@@ -111,27 +112,36 @@ class TreeTraverseTestCase(unittest.TestCase):
         tree = trading.lib.tree.Tree(structure)
         return tree
 
-    def test_depth_first_search(self):
-        tree = self.build_tree()
-        results = [ x.value for x in self.searcher.search(tree) ]
-        self.assertEquals(results, [ x for x in range(1, 12) ])
+    def test_finds_values(self):
+        results = [ x.value for x in Searcher.search(self.tree, 5) ]
+        self.assertEquals(results, [ 5 ])
+
+    def test_cant_find_values_with_max_limit(self):
+        results = [ x.value for x in Searcher.search(self.tree, 5, 3) ]
+        self.assertEquals(results, [])
+
+    def test_finds_values_with_max_limit(self):
+        results = [ x.value for x in Searcher.search(self.tree, 5, 4) ]
+        self.assertEquals(results, [5])
 
     def test_leafs_at(self):
-        tree = self.build_tree()
         paths = [
             3,
             10,
             11,
         ]
-        results = [ node.value for node in self.searcher.leafs_at(tree, 3) ]
+        results = [ node.value for node in Searcher.leafs_at(self.tree, 3) ]
         self.assertEquals(results, paths)
 
     def test_leafs_at_with_paths(self):
-        tree = self.build_tree()
+        tree = self.tree
         paths = [
             (1, 2, 3,),
             (1, 7, 10,),
             (1, 7, 11,),
         ]
-        results = [ tuple(map(lambda x: x.value, node.path())) for node in self.searcher.leafs_at(tree, 3) ]
+        results = [
+            tuple(map(lambda x: x.value, node.path()))
+            for node in Searcher.leafs_at(self.tree, 3)
+        ]
         self.assertEquals(results, paths)
