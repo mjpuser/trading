@@ -17,15 +17,15 @@ class TreeTestCase(unittest.TestCase):
     def test_child_node_has_parent(self):
         node = trading.lib.tree.Node()
         self.tree.add_child(node)
-        self.assertEquals(node.parent, self.tree)
+        self.assertEqual(node.parent, self.tree)
 
     def test_node_with_no_children_is_empty_list(self):
-        self.assertEquals(self.tree.children, [])
+        self.assertEqual(self.tree.children, [])
 
     def test_node_has_a_value(self):
         value = 'test'
         node = trading.lib.tree.Node(value)
-        self.assertEquals(node.value, value)
+        self.assertEqual(node.value, value)
 
     def test_node_is_leaf(self):
         value = 'test'
@@ -43,14 +43,14 @@ class TreeTestCase(unittest.TestCase):
         value = 'test'
         node = trading.lib.tree.Node(value)
         self.tree.add_child(node)
-        self.assertEquals((self.tree, node,), node.path())
+        self.assertEqual((self.tree, node,), node.path())
 
     def test_only_accept_child_node_type(self):
         value = None
         with self.assertRaises(ValueError) as context:
             self.tree.add_child(value)
-        self.assertEquals(
-            context.exception.message,
+        self.assertEqual(
+            list(context.exception.args)[0],
             'Child node must be type trading.lib.tree.Node not {}'.format(value.__class__.__name__)
         )
         self.assertTrue(isinstance(context.exception, ValueError))
@@ -114,15 +114,15 @@ class TreeTraverseTestCase(unittest.TestCase):
 
     def test_finds_values(self):
         results = [ x.value for x in Searcher.search(self.tree, 5) ]
-        self.assertEquals(results, [ 5 ])
+        self.assertEqual(results, [ 5 ])
 
     def test_cant_find_values_with_max_limit(self):
         results = [ x.value for x in Searcher.search(self.tree, 5, 3) ]
-        self.assertEquals(results, [])
+        self.assertEqual(results, [])
 
     def test_finds_values_with_max_limit(self):
         results = [ x.value for x in Searcher.search(self.tree, 5, 4) ]
-        self.assertEquals(results, [5])
+        self.assertEqual(results, [5])
 
     def test_leafs_at(self):
         paths = [
@@ -131,7 +131,7 @@ class TreeTraverseTestCase(unittest.TestCase):
             11,
         ]
         results = [ node.value for node in Searcher.leafs_at(self.tree, 3) ]
-        self.assertEquals(results, paths)
+        self.assertEqual(results, paths)
 
     def test_leafs_at_with_paths(self):
         tree = self.tree
@@ -144,4 +144,4 @@ class TreeTraverseTestCase(unittest.TestCase):
             tuple(map(lambda x: x.value, node.path()))
             for node in Searcher.leafs_at(self.tree, 3)
         ]
-        self.assertEquals(results, paths)
+        self.assertEqual(results, paths)

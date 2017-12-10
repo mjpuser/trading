@@ -1,3 +1,46 @@
+import trading.rl
+import trading.lib.tree
+import unittest
+import test.unit.data
+import numpy as np
+
+OWNS = 1
+
+NOOP = 0
+BUY = 1
+SELL = 2
+
+
+class QTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        def r(state):
+            action = state[-1]
+            if action == SELL:
+                RETURN = 2
+                return state[RETURN]
+            return 0
+        def actions_filter(state):
+            if state[OWNS] == 1:
+                return (NOOP, SELL,)
+            else:
+                return (NOOP, BUY,)
+        self.q = trading.rl.Q(r=r, shape=(2, 2, 2, 3,), actions_filter=actions_filter)
+        Searcher = trading.lib.tree.Searcher
+
+    def test_learning(self):
+        states = iter([
+            # change | owns | return | action
+            (0, 0, 0, 1,),
+            (1, 1, 1, 2,),
+        ])
+        self.q.learn(states)
+        expected = np.zeros((2,2,2,3,))
+        expected[1, 1, 1, 2] = 1
+        np.testing.assert_array_equal(self.q.table, expected)
+
+
 # import test.unit
 # import tranding.q
 #

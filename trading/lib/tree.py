@@ -45,8 +45,8 @@ class Searcher:
 
     @staticmethod
     def search(node, value, max=None):
-        if max > 0 or max is None:
-            if max > 0:
+        if max is None or max > 0:
+            if max is not None and max > 0:
                 max = max - 1
             if node.value == value:
                 yield node

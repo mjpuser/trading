@@ -1,55 +1,34 @@
-# reward function
-#
-#
-#
-# permutations
-# x x x x x x
-# x x x x x b
-# x x x x b x
-# x x x x b s
-# x x x b x x
-# x x x b s x
-# x x x b x s
-# x x b x x x
-# x x b s x x
-# x x b x s x
-# x x b x x s
-# x b x x x x
-# x b s x x x
-# x b x s x x
-# x b x x s x
-# x b x x x s
-# b s x x x x
-# b x s x x x
-# b x x s x x
-# b x x x s x
-# b x x x x s
-# TODO future optimization is to be able to concatenate runs.  Ex:
-# b s x x
-# x b s x
-# x x b s
-# could serve as any permutation of the horizon
+import numpy as np
+
+def default_actions_filter(state):
+    return None
 
 class Q:
 
-    data = None
-    reward_function = None
-    meta_update = None
-    get_available_actions = None
+    def __init__(self, r, shape, actions_filter=default_actions_filter, table=None):
+        """
+        Initializes the Q function.
+        r is the reward function.
+        """
+        self.r = r
+        self.table = np.zeros(shape) if table is None else table
+        self.actions_filter = actions_filter
 
-    def learn(iterations=100, alpha=0.3, gamma=0.7):
-        # iterate over state
-        # generate metadata (metadata is run specific, basically like a session)
-        # generate reward
-        # get available actions,
-        #   - generate tree
-        #   - optimization lies in not being able to sell multiple times, or buy multiple times
-        #   - basically just different lengths of holding
-        # ensure we do all permutations, however, whats the point of iterations, then?
-        #   - permutation generator
-        #   - if we do permutations, we have to have multiple metas
-        #   - we have to do like a double for loops
-        pass
+    def update(self, s0, s1, alpha=0.3, gamma=0.7):
+        s1max = self.argmax(s1)
+        self.table[s0] = self.table[s0] + self.r(s0) + self.table[s1max]
+        return self.table
 
-    def run(data):
-        pass
+    def argmax(self, state):
+        state = list(state)[:-1]
+        allowed_states = tuple( state + [self.actions_filter(state)] )
+        best_action = np.argmax(self.table[allowed_states])
+        return tuple(state + [best_action])
+
+    def learn(self, states):
+        s0 = next(states)
+        for s1 in states:
+            self.update(s0, s1)
+            s0 = s1
+        # include last state
+        self.table[s0] += self.r(s0)
