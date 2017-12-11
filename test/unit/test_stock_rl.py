@@ -8,14 +8,13 @@ NOOP = trading.stock_rl.ACTION['noop']
 class StateGeneratorTestCase(unittest.TestCase):
 
     def test_paths(self):
+        data = [(1,), (1,), (1,),]
         paths = [
             path
-            for path in trading.stock_rl.state_generator(horizon=5)
+            for path in trading.stock_rl.state_generator(data, horizon=3)
         ]
         expected = [
-            (BUY, SELL,),
-            (BUY, NOOP, SELL,),
-            (BUY, NOOP, NOOP, SELL,),
-            (BUY, NOOP, NOOP, NOOP, SELL,),
+            (1, 0, 0, BUY,), (1, 1, 1, SELL,),
+            (1, 0, 0, BUY,), (1, 1, 1, NOOP,), (1, 1, 3, SELL,),
         ]
         self.assertEqual(expected, paths)
