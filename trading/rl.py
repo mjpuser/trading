@@ -32,10 +32,11 @@ class Q:
         best_action = np.argmax(self.table[allowed_states])
         return tuple(state + [best_action])
 
-    def learn(self, states):
-        s0 = next(states)
-        for s1 in states:
-            self.update(s0, s1)
-            s0 = s1
-        # include last state
-        self.table[s0] += self.r(s0)
+    def learn(self, states, iterations=1):
+        for _ in range(iterations):
+            s0 = next(states)
+            for s1 in states:
+                self.update(s0, s1)
+                s0 = s1
+            # include last state
+            self.table[s0] += self.r(s0)
