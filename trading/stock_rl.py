@@ -131,3 +131,19 @@ class Learner(trading.rl.Q):
             actions_filter,
             table
         )
+
+
+    def predict(self, states):
+        ret = 0
+        owns = OWN['false']
+        for state in states:
+            if owns == OWN['true']:
+                ret = (1 + ret) * (1 + change) - 1
+            *_, action = self.argmax(self.discretize((change, owns, ret, None,)))
+            yield change, owns, ret, action
+            if action == ACTION['buy']:
+                owns = OWN['true']
+                ret = 0
+            elif action == ACTION['sell']:
+                owns = OWN['false']
+                ret = 0
