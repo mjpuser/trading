@@ -26,10 +26,9 @@ def discretize_return(ret):
     return discretize_change(ret)
 
 def discretize_change(change):
-    x = 0
     if -0.005 < change < 0:
         x = 11
-    if 0 <= change < 0.005:
+    elif 0 <= change < 0.005:
         x = 0
 
     elif 0.005 <= change < 0.015:

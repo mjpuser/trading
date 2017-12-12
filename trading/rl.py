@@ -23,19 +23,23 @@ class Q:
         ds0 = self.discretize(s0)
         ds1 = self.discretize(s1)
         s1max = self.argmax(ds1)
-        self.table[ds0] = self.table[ds0] + self.r(s0) + self.table[s1max]
+        # (1 - a)(Q[s0,a0]) + a(R[s0,a0] + g * Qmax[s1,a1])
+        self.table[ds0] = ((1 - alpha) * self.table[ds0]) + (alpha * (self.r(s0) + (gamma * self.table[s1max])))
         return self.table
 
     def argmax(self, state):
-        state = list(state)[:-1]
-        allowed_states = tuple( state + [self.actions_filter(state)] )
+        *state, _ = state
+        # TODO be better at limitting allowed states for max
+        allowed_states = *state, None
         best_action = np.argmax(self.table[allowed_states])
-        return tuple(state + [best_action])
+        ret = *state, best_action
+        return ret
 
     def learn(self, states, iterations=1):
         for _ in range(iterations):
-            s0 = next(states)
-            for s1 in states:
+            states_iter = states()
+            s0 = next(states_iter)
+            for s1 in states_iter:
                 self.update(s0, s1)
                 s0 = s1
             # include last state

@@ -12,7 +12,7 @@ class QTestCase(unittest.TestCase):
         self.q = trading.rl.Q(reward, (2,))
 
     def test_learning(self):
-        states = iter([
+        states = lambda: iter([
             # change
             (0,),
             (1,),
