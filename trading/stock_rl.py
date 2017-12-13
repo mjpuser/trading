@@ -1,5 +1,6 @@
 import trading.lib.tree
 import itertools
+import trading.rl
 
 # index to dimension
 COL = {
@@ -59,13 +60,13 @@ def discretize_action(action):
 
 # states is % change, bollinger, return, owns, action
 def state_generator(states, horizon=10):
-    tree = trading.lib.tree.Tree({
+    buy_sell = tree = trading.lib.tree.Tree({
         'value': ACTION['buy'],
         'children': [
             { 'value': ACTION['sell'] }
         ]
     })
-    root = tree
+    buy_root = tree
     for _ in range(horizon - 2):
         node = trading.lib.tree.Tree({
             'value': ACTION['noop'],
@@ -76,9 +77,31 @@ def state_generator(states, horizon=10):
         tree.add_child(node)
         tree = node
 
+    noop_root = tree = trading.lib.tree.Tree({
+        'value': ACTION['noop']
+    })
+    for _ in range(horizon - 2):
+        buy_sell = trading.lib.tree.Tree({
+            'value': ACTION['buy'],
+            'children': [
+                { 'value': ACTION['sell'] }
+            ]
+        })
+        noop = trading.lib.tree.Tree({
+            'value': ACTION['noop']
+        })
+        tree.add_child(buy_sell)
+        tree.add_child(noop)
+        tree = noop
+
+    results = itertools.chain(
+        trading.lib.tree.Searcher.search(buy_root, value=ACTION['sell']),
+        trading.lib.tree.Searcher.search(noop_root, value=ACTION['sell'])
+    )
+
     for i in range(len(states) - horizon + 1):
         state_chunk = states[i:i + horizon]
-        for node in trading.lib.tree.Searcher.search(root, value=ACTION['sell']):
+        for node in results:
             actions = list(map(lambda n: (n.value,), node.path()))
             chunk = state_chunk[0:len(actions)]
             episode = map(
@@ -132,18 +155,20 @@ class Learner(trading.rl.Q):
             table
         )
 
-
     def predict(self, states):
+        total_return = 0
         ret = 0
         owns = OWN['false']
-        for state in states:
+        for change in states:
             if owns == OWN['true']:
                 ret = (1 + ret) * (1 + change) - 1
             *_, action = self.argmax(self.discretize((change, owns, ret, None,)))
-            yield change, owns, ret, action
+            print(ret, action)
             if action == ACTION['buy']:
                 owns = OWN['true']
                 ret = 0
             elif action == ACTION['sell']:
                 owns = OWN['false']
+                total_return += ret
                 ret = 0
+        print('total return', total_return)

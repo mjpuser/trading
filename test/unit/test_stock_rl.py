@@ -17,6 +17,7 @@ class StateGeneratorTestCase(unittest.TestCase):
         expected = [
             (1, 0, 0, BUY,), (1, 1, 1, SELL,),
             (1, 0, 0, BUY,), (1, 1, 1, NOOP,), (1, 1, 3, SELL,),
+            (1, 0, 0, NOOP,), (1, 0, 0, BUY,), (1, 1, 1, SELL,),
         ]
         self.assertEqual(expected, paths)
 
@@ -24,11 +25,12 @@ class StateGeneratorTestCase(unittest.TestCase):
         data = [(1,), (1,), (2,),]
         paths = [
             path
-            for path in trading.stock_rl.state_generator(data, horizon=2)
+            for path in trading.stock_rl.state_generator(data, horizon=3)
         ]
         expected = [
             (1, 0, 0, BUY,), (1, 1, 1, SELL,),
-            (1, 0, 0, BUY,), (2, 1, 2, SELL,),
+            (1, 0, 0, BUY,), (1, 1, 1, NOOP,), (2, 1, 5, SELL,),
+            (1, 0, 0, NOOP,), (1, 0, 0, BUY,), (2, 1, 2, SELL,),
         ]
         self.assertEqual(expected, paths)
 
@@ -49,7 +51,7 @@ class StateGeneratorTestCase(unittest.TestCase):
         ]
         expecteds = [
             BUY,
-            BUY,
+            NOOP,
             NOOP,
             SELL,
         ]

@@ -43,4 +43,4 @@ class Q:
                 self.update(s0, s1)
                 s0 = s1
             # include last state
-            self.table[s0] += self.r(s0)
+            self.table[self.discretize(s0)] += self.r(s0)
