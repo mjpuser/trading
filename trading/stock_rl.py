@@ -5,9 +5,10 @@ import trading.rl
 # index to dimension
 COL = {
     'change': 0,
-    'owns': 1,
-    'return': 2,
-    'action': 3,
+    'bollinger': 1,
+    'owns': 2,
+    'return': 3,
+    'action': 4,
 }
 
 # index for owning
@@ -112,11 +113,11 @@ def state_generator(states, horizon=10):
             owns = OWN['false']
             ret = 0
             for state in episode:
-                change, action = state
+                change, bollinger, action = state
                 if owns == OWN['true']:
                     ret = (1 + ret) * (1 + change) - 1
 
-                yield change, owns, ret, action
+                yield change, bollinger, owns, ret, action
                 if action == ACTION['buy']:
                     owns = OWN['true']
                     ret = 0
@@ -134,9 +135,10 @@ def actions_filter(state):
         return (ACTION['noop'], ACTION['buy'],)
 
 def discretize(state):
-    change, owns, ret, action = state
+    change, bollinger, owns, ret, action = state
     return (
         discretize_change(change),
+        bollinger,
         owns,
         discretize_return(ret),
         action,
@@ -146,7 +148,7 @@ def discretize(state):
 class Learner(trading.rl.Q):
 
     def __init__(self, table=None):
-        shape = (12, 2, 12, 3,)
+        shape = (12, 3, 2, 12, 3,)
         super(Learner, self).__init__(
             reward,
             shape,
@@ -159,11 +161,11 @@ class Learner(trading.rl.Q):
         total_return = 0
         ret = 0
         owns = OWN['false']
-        for change in states:
+        for change, bollinger in states:
             if owns == OWN['true']:
                 ret = (1 + ret) * (1 + change) - 1
-            *_, action = self.argmax(self.discretize((change, owns, ret, None,)))
-            print(ret, action)
+            *_, action = self.argmax(self.discretize((change, bollinger, owns, ret, None,)))
+            print(ret, bollinger, action)
             if action == ACTION['buy']:
                 owns = OWN['true']
                 ret = 0
