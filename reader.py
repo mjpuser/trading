@@ -1,21 +1,41 @@
 import trading.stock_rl
 import pandas as pd
 
+window_size = 12
+num_of_std = 1.2
+test_size = 365
+horizon = 350
+
 learner = trading.stock_rl.Learner()
-df = pd.read_csv('/Users/mattp/Downloads/GOOG.csv')
-df['change'] = df['Close'].pct_change()
-train_data = [ (x,) for x in df['change'][-90:] ]
+#df = pd.read_csv('/Users/mattp/Downloads/GOOG.csv')
+df = pd.read_csv('/Users/mattp/Downloads/SPY.csv')
+#df = pd.read_csv('/Users/mattp/Downloads/BTC-USD.csv')
+#df = pd.read_csv('/Users/mattp/Downloads/TSLA.csv')
 
+stock_price = df['Close']
+df['change'] = df['Adj Close'].pct_change()
+
+rolling_mean = stock_price.rolling(window=window_size).mean()
+rolling_std = stock_price.rolling(window=window_size).std()
+df['upper'] = upper_band = rolling_mean + (rolling_std * num_of_std)
+df['lower'] = lower_band = rolling_mean - (rolling_std * num_of_std)
+
+def bollinger(row):
+    x = 0
+    if row['upper'] < row['Close']:
+        x = 1
+    elif row['lower'] > row['Close']:
+        x = 2
+    return x
+
+df['bollinger'] = df.apply(bollinger, axis=1)
+
+get_data = lambda r: (r['change'], r['bollinger'])
+train_data = df[window_size:-test_size].apply(get_data, axis=1)
 learner.learn(
-    lambda: trading.stock_rl.state_generator(train_data, horizon=10),
+    lambda: trading.stock_rl.state_generator(train_data, horizon),
 )
-# rolling_mean = stock_price.rolling(window=window_size).mean()
-#     rolling_std  = stock_price.rolling(window=window_size).std()
-#     upper_band = rolling_mean + (rolling_std*num_of_std)
-#     lower_band = rolling_mean - (rolling_std*num_of_std)
-#
-#     return rolling_mean, upper_band, lower_band
 
-test_data = df['change'][-90:]
+test_data = df[-test_size:].apply(get_data, axis=1)
 
 learner.predict(test_data)
