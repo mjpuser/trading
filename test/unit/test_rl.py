@@ -13,9 +13,8 @@ class QTestCase(unittest.TestCase):
 
     def test_learning(self):
         states = lambda: iter([
-            # change
-            (0,),
-            (1,),
+            # episode with states
+            iter([(0,), (1,),])
         ])
         self.q.learn(states)
         expected = np.zeros((2,))

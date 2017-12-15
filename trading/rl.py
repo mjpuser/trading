@@ -35,12 +35,12 @@ class Q:
         ret = *state, best_action
         return ret
 
-    def learn(self, states, iterations=1):
+    def learn(self, episodes, iterations=1):
         for _ in range(iterations):
-            states_iter = states()
-            s0 = next(states_iter)
-            for s1 in states_iter:
-                self.update(s0, s1)
-                s0 = s1
-            # include last state
-            self.table[self.discretize(s0)] += self.r(s0)
+            for episode in episodes():
+                s0 = next(episode)
+                for s1 in episode:
+                    self.update(s0, s1)
+                    s0 = s1
+                # include last state
+                self.table[self.discretize(s0)] += self.r(s0)

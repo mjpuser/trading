@@ -13,15 +13,24 @@ COL = {
 
 # index for owning
 OWN = {
-    'false': 0,
-    'true': 1,
+    'false': 'none',
+    'true': 'own',
 }
 
 # index for action
 ACTION = {
-    'noop': 0,
+    'promise': 'promise',
+    'buy': 'buy',
+    'sell': 'sell',
+    'wait': 'wait',
+}
+
+# index for action
+DACTION = {
+    'promise': 0,
     'buy': 1,
     'sell': 2,
+    'wait': 3,
 }
 
 def discretize_return(ret):
@@ -57,47 +66,46 @@ def discretize_change(change):
     return x
 
 def discretize_action(action):
-    return ACTION.get(action)
+    return DACTION[action]
 
+def discretize_owns(owns):
+    if owns == 'none':
+        return 0
+    else:
+        return 1
 # states is % change, bollinger, return, owns, action
-def state_generator(states, horizon=10):
-    buy_sell = tree = trading.lib.tree.Tree({
-        'value': ACTION['buy'],
-        'children': [
-            { 'value': ACTION['sell'] }
-        ]
-    })
-    buy_root = tree
-    for _ in range(horizon - 2):
-        node = trading.lib.tree.Tree({
-            'value': ACTION['noop'],
-            'children': [
-                { 'value': ACTION['sell'] }
-            ]
-        })
-        tree.add_child(node)
-        tree = node
+#                       b
+#            s                       -
+#            b       -           s       -
+#          s      b              b -   s   -
+#               s              s          s
 
-    noop_root = tree = trading.lib.tree.Tree({
-        'value': ACTION['noop']
-    })
-    for _ in range(horizon - 2):
-        buy_sell = trading.lib.tree.Tree({
-            'value': ACTION['buy'],
-            'children': [
-                { 'value': ACTION['sell'] }
-            ]
-        })
-        noop = trading.lib.tree.Tree({
-            'value': ACTION['noop']
-        })
-        tree.add_child(buy_sell)
-        tree.add_child(noop)
-        tree = noop
+def state_generator(states, horizon=10):
+    leafs_at = trading.lib.tree.Searcher.leafs_at
+    Node = trading.lib.tree.Node
+    buy_root = tree = Node(ACTION['buy'])
+    for i in range(1, horizon):
+        for child in leafs_at(tree, level=i):
+            if child.value in [ACTION['sell'], ACTION['wait']]:
+                child.add_child(Node(ACTION['wait']))
+                child.add_child(Node(ACTION['buy']))
+            elif child.value in [ACTION['buy'], ACTION['promise']]:
+                child.add_child(Node(ACTION['sell']))
+                child.add_child(Node(ACTION['promise']))
+
+    wait_root = tree = Node(ACTION['wait'])
+    for i in range(1, horizon):
+        for child in leafs_at(tree, level=i):
+            if child.value in [ACTION['sell'], ACTION['wait']]:
+                child.add_child(Node(ACTION['wait']))
+                child.add_child(Node(ACTION['buy']))
+            elif child.value in [ACTION['buy'], ACTION['promise']]:
+                child.add_child(Node(ACTION['promise']))
+                child.add_child(Node(ACTION['sell']))
 
     results = itertools.chain(
         trading.lib.tree.Searcher.search(buy_root, value=ACTION['sell']),
-        trading.lib.tree.Searcher.search(noop_root, value=ACTION['sell'])
+        trading.lib.tree.Searcher.search(wait_root, value=ACTION['sell'])
     )
 
     for i in range(len(states) - horizon + 1):
@@ -110,17 +118,22 @@ def state_generator(states, horizon=10):
                 zip(chunk, actions)
             )
 
-            owns = OWN['false']
-            ret = 0
-            for state in episode:
-                change, bollinger, action = state
-                if owns == OWN['true']:
-                    ret = (1 + ret) * (1 + change) - 1
+            def gen_episode(episode):
+                owns = OWN['false']
+                ret = 0
+                for state in episode:
+                    change, bollinger, action = state
+                    if owns == OWN['true']:
+                        ret = (1 + ret) * (1 + change) - 1
 
-                yield change, bollinger, owns, ret, action
-                if action == ACTION['buy']:
-                    owns = OWN['true']
-                    ret = 0
+                    yield change, bollinger, owns, ret, action
+                    if action == ACTION['buy']:
+                        owns = OWN['true']
+                        ret = 0
+                    elif action == ACTION['sell']:
+                        owns = OWN['false']
+
+            yield gen_episode(episode)
 
 def reward(state):
     action = state[COL['action']]
@@ -130,25 +143,25 @@ def reward(state):
 
 def actions_filter(state):
     if state[COL['owns']] == OWN['true']:
-        return (ACTION['noop'], ACTION['sell'],)
+        return (ACTION['promise'], ACTION['sell'],)
     else:
-        return (ACTION['noop'], ACTION['buy'],)
+        return (ACTION['wait'], ACTION['buy'],)
 
 def discretize(state):
     change, bollinger, owns, ret, action = state
     return (
         discretize_change(change),
         bollinger,
-        owns,
+        discretize_owns(owns),
         discretize_return(ret),
-        action,
+        discretize_action(action),
     )
 
 
 class Learner(trading.rl.Q):
 
     def __init__(self, table=None):
-        shape = (12, 3, 2, 12, 3,)
+        shape = (12, 3, 2, 12, 4,)
         super(Learner, self).__init__(
             reward,
             shape,
