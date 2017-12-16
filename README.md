@@ -8,6 +8,7 @@ learn patterns so that it may make high performing actions (buy / sell).
 ```
 virtualenv -p python3.6 env
 source env/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Run
