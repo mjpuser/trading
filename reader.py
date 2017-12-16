@@ -1,10 +1,10 @@
 import trading.stock_rl
 import pandas as pd
 
-window_size = 12
-num_of_std = 1.2
-test_size = 365
-horizon = 350
+window_size = 20
+num_of_std = 1.5
+test_size = 100
+horizon = 17
 
 learner = trading.stock_rl.Learner()
 #df = pd.read_csv('/Users/mattp/Downloads/GOOG.csv')
@@ -34,6 +34,7 @@ get_data = lambda r: (r['change'], r['bollinger'])
 train_data = df[window_size:-test_size].apply(get_data, axis=1)
 learner.learn(
     lambda: trading.stock_rl.state_generator(train_data, horizon),
+    iterations=40
 )
 
 test_data = df[-test_size:].apply(get_data, axis=1)

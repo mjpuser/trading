@@ -16,7 +16,7 @@ class QTestCase(unittest.TestCase):
             # episode with states
             iter([(0,), (1,),])
         ])
-        self.q.learn(states)
+        self.q.learn(states, iterations=1)
         expected = np.zeros((2,))
         expected[1] = 1
         np.testing.assert_array_equal(self.q.table, expected)

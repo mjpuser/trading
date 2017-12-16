@@ -33,6 +33,13 @@ DACTION = {
     'wait': 3,
 }
 
+revmap = {
+    '0': 'promise',
+    '1': 'buy',
+    '2': 'sell',
+    '3': 'wait',
+}
+
 def discretize_return(ret):
     return discretize_change(ret)
 
@@ -66,7 +73,8 @@ def discretize_change(change):
     return x
 
 def discretize_action(action):
-    return DACTION[action]
+    # return None in case invalid action
+    return DACTION.get(action)
 
 def discretize_owns(owns):
     if owns == 'none':
@@ -178,11 +186,16 @@ class Learner(trading.rl.Q):
             if owns == OWN['true']:
                 ret = (1 + ret) * (1 + change) - 1
             *_, action = self.argmax(self.discretize((change, bollinger, owns, ret, None,)))
-            print(ret, bollinger, action)
-            if action == ACTION['buy']:
+            b = 'mid'
+            if bollinger == 1:
+                b = 'abv'
+            elif bollinger == 2:
+                b = 'bel'
+            print(b, owns, revmap[str(action)])
+            if action == DACTION['buy']:
                 owns = OWN['true']
                 ret = 0
-            elif action == ACTION['sell']:
+            elif action == DACTION['sell']:
                 owns = OWN['false']
                 total_return += ret
                 ret = 0

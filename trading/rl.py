@@ -19,7 +19,7 @@ class Q:
         self.table = np.zeros(shape) if table is None else table
         self.actions_filter = actions_filter
 
-    def update(self, s0, s1, alpha=0.3, gamma=0.7):
+    def update(self, s0, s1, alpha=0.3, gamma=0.9):
         ds0 = self.discretize(s0)
         ds1 = self.discretize(s1)
         s1max = self.argmax(ds1)
@@ -35,12 +35,12 @@ class Q:
         ret = *state, best_action
         return ret
 
-    def learn(self, episodes, iterations=1):
+    def learn(self, episodes, iterations=10, alpha=0.3, gamma=0.9):
         for _ in range(iterations):
             for episode in episodes():
                 s0 = next(episode)
                 for s1 in episode:
-                    self.update(s0, s1)
+                    self.update(s0, s1, alpha, gamma)
                     s0 = s1
                 # include last state
                 self.table[self.discretize(s0)] += self.r(s0)
