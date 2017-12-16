@@ -1,7 +1,7 @@
 import numpy as np
 
 def default_actions_filter(state):
-    return None
+    return [0]
 
 def default_discretizer(state):
     return state
@@ -24,23 +24,27 @@ class Q:
         ds1 = self.discretize(s1)
         s1max = self.argmax(ds1)
         # (1 - a)(Q[s0,a0]) + a(R[s0,a0] + g * Qmax[s1,a1])
-        self.table[ds0] = ((1 - alpha) * self.table[ds0]) + (alpha * (self.r(s0) + (gamma * self.table[s1max])))
+        value = ((1 - alpha) * self.table[ds0]) + (alpha * (self.r(s0) + (gamma * self.table[s1max])))
+        self.table[ds0] = value
         return self.table
 
     def argmax(self, state):
         *state, _ = state
-        # TODO be better at limitting allowed states for max
-        allowed_states = *state, None
+        action_indexes = self.actions_filter(state)
+        allowed_states = (*state, action_indexes)
         best_action = np.argmax(self.table[allowed_states])
-        ret = *state, best_action
+        ret = *state, action_indexes[best_action]
         return ret
 
-    def learn(self, episodes, iterations=10, alpha=0.3, gamma=0.9):
-        for _ in range(iterations):
-            for episode in episodes():
-                s0 = next(episode)
-                for s1 in episode:
-                    self.update(s0, s1, alpha, gamma)
-                    s0 = s1
-                # include last state
-                self.table[self.discretize(s0)] += self.r(s0)
+    def learn(self, states, iterations=10, alpha=0.3, gamma=0.9):
+        for i in range(iterations):
+            print('starting iteration {}'.format(i))
+            states_iter = states()
+            s0 = next(states_iter)
+            for s1 in states_iter:
+                print(s0)
+                self.update(s0, s1, alpha, gamma)
+                s0 = s1
+            # include last state
+            self.table[self.discretize(s0)] += self.r(s0)
+        # print('table', self.table)

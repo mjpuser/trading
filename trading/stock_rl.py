@@ -81,7 +81,7 @@ def discretize_owns(owns):
         return 0
     else:
         return 1
-# states is % change, bollinger, return, owns, action
+# states is % change, bollinger, owns, return, action
 #                       b
 #            s                       -
 #            b       -           s       -
@@ -116,8 +116,9 @@ def state_generator(states, horizon=10):
         trading.lib.tree.Searcher.search(wait_root, value=ACTION['sell'])
     )
 
-    for i in range(len(states) - horizon + 1):
+    for i in range(len(states) + 1 - horizon):
         state_chunk = states[i:i + horizon]
+        #print('gen state for', state_chunk)
         for node in results:
             actions = list(map(lambda n: (n.value,), node.path()))
             chunk = state_chunk[0:len(actions)]
@@ -126,34 +127,34 @@ def state_generator(states, horizon=10):
                 zip(chunk, actions)
             )
 
-            def gen_episode(episode):
-                owns = OWN['false']
-                ret = 0
-                for state in episode:
-                    change, bollinger, action = state
-                    if owns == OWN['true']:
-                        ret = (1 + ret) * (1 + change) - 1
-
-                    yield change, bollinger, owns, ret, action
-                    if action == ACTION['buy']:
-                        owns = OWN['true']
-                        ret = 0
-                    elif action == ACTION['sell']:
-                        owns = OWN['false']
-
-            yield gen_episode(episode)
+            owns = OWN['false']
+            ret = 0
+            for state in episode:
+                change, bollinger, action = state
+                if owns == OWN['true']:
+                    ret = (1 + ret) * (1 + change) - 1
+                else:
+                    ret = 0
+                #print('generating', 'return:', change, bollinger, ret, action)
+                yield change, bollinger, owns, ret, action
+                if action == ACTION['buy']:
+                    owns = OWN['true']
+                    ret = 0
+                elif action == ACTION['sell']:
+                    owns = OWN['false']
 
 def reward(state):
+    ret = 0
     action = state[COL['action']]
     if action == ACTION['sell']:
-        return state[COL['return']]
-    return 0
+        ret = state[COL['return']]
+    return ret
 
 def actions_filter(state):
     if state[COL['owns']] == OWN['true']:
-        return (ACTION['promise'], ACTION['sell'],)
+        return (DACTION['sell'], DACTION['promise'],)
     else:
-        return (ACTION['wait'], ACTION['buy'],)
+        return (DACTION['wait'], DACTION['buy'],)
 
 def discretize(state):
     change, bollinger, owns, ret, action = state
