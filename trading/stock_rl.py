@@ -1,5 +1,6 @@
 import trading.lib.tree
 import itertools
+import random
 import trading.rl
 
 # index to dimension
@@ -15,6 +16,11 @@ COL = {
 OWN = {
     'false': 'none',
     'true': 'own',
+}
+
+ROWN = {
+    'none': 0,
+    'own': 1,
 }
 
 # index for action
@@ -111,7 +117,7 @@ def state_generator(states, horizon=10):
                 child.add_child(Node(ACTION['promise']))
                 child.add_child(Node(ACTION['sell']))
 
-    results = itertools.chain(
+    results = lambda: itertools.chain(
         trading.lib.tree.Searcher.search(buy_root, value=ACTION['sell']),
         trading.lib.tree.Searcher.search(wait_root, value=ACTION['sell'])
     )
@@ -119,7 +125,7 @@ def state_generator(states, horizon=10):
     for i in range(len(states) + 1 - horizon):
         state_chunk = states[i:i + horizon]
         #print('gen state for', state_chunk)
-        for node in results:
+        for node in results():
             actions = list(map(lambda n: (n.value,), node.path()))
             chunk = state_chunk[0:len(actions)]
             episode = map(
@@ -133,10 +139,8 @@ def state_generator(states, horizon=10):
                 change, bollinger, action = state
                 if owns == OWN['true']:
                     ret = (1 + ret) * (1 + change) - 1
-                else:
-                    ret = 0
-                #print('generating', 'return:', change, bollinger, ret, action)
-                yield change, bollinger, owns, ret, action
+                if random.randint(0,1000000000) == 0:
+                    yield change, bollinger, owns, ret, action
                 if action == ACTION['buy']:
                     owns = OWN['true']
                     ret = 0
@@ -151,7 +155,7 @@ def reward(state):
     return ret
 
 def actions_filter(state):
-    if state[COL['owns']] == OWN['true']:
+    if state[COL['owns']] == ROWN['own']:
         return (DACTION['sell'], DACTION['promise'],)
     else:
         return (DACTION['wait'], DACTION['buy'],)

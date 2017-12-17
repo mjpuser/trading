@@ -4,7 +4,7 @@ import pandas as pd
 window_size = 20
 num_of_std = 1.5
 test_size = 100
-horizon = 16
+horizon = 30
 iterations = 1
 
 learner = trading.stock_rl.Learner()

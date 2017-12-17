@@ -61,13 +61,12 @@ class StateGeneratorTestCase(unittest.TestCase):
 
         learner = trading.stock_rl.Learner()
         learner.learn(
-            lambda: trading.stock_rl.state_generator(data, horizon=4),
+            lambda: trading.stock_rl.state_generator(data, horizon=6),
             iterations=1,
             alpha=0.3,
-            gamma=1
+            gamma=0.7
         )
 
-        print('table', learner.table[(learner.discretize((-1, 1, 'none', 0, None)))])
         states = [
             (0, 0, 'none', 0, None,),
             (-1, 1, 'none', 0, None,),
@@ -82,5 +81,4 @@ class StateGeneratorTestCase(unittest.TestCase):
         ]
         for index, state in enumerate(states):
             *_, action = learner.argmax(learner.discretize(state))
-            print(learner.table[learner.discretize(state)])
             self.assertEqual(action, expecteds[index])

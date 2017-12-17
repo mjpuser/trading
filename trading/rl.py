@@ -33,6 +33,7 @@ class Q:
         action_indexes = self.actions_filter(state)
         allowed_states = (*state, action_indexes)
         best_action = np.argmax(self.table[allowed_states])
+        #print('chose', best_action, 'mapping with', action_indexes)
         ret = *state, action_indexes[best_action]
         return ret
 
@@ -42,7 +43,7 @@ class Q:
             states_iter = states()
             s0 = next(states_iter)
             for s1 in states_iter:
-                print(s0)
+                #print(s0)
                 self.update(s0, s1, alpha, gamma)
                 s0 = s1
             # include last state
