@@ -4,13 +4,13 @@ import pandas as pd
 window_size = 20
 num_of_std = 1.5
 test_size = 100
-horizon = 20
+horizon = 40
 iterations = 4
-sample_rate = 0.4
+sample_rate = 0.5
 
 learner = trading.stock_rl.Learner()
-#df = pd.read_csv('/Users/mattp/Downloads/GOOG.csv')
-df = pd.read_csv('/home/matthew/Downloads/SPY.csv')
+df = pd.read_csv('/Users/mattp/Downloads/GOOG.csv')
+#df = pd.read_csv('/home/matthew/Downloads/SPY.csv')
 #df = pd.read_csv('/Users/mattp/Downloads/BTC-USD.csv')
 #df = pd.read_csv('/Users/mattp/Downloads/TSLA.csv')
 
