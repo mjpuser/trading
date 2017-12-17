@@ -94,12 +94,14 @@ def discretize_owns(owns):
 #          s      b              b -   s   -
 #               s              s          s
 
-def state_generator(states, horizon=10):
+def state_generator(states, horizon=10, sample_rate=1):
     leafs_at = trading.lib.tree.Searcher.leafs_at
     Node = trading.lib.tree.Node
     buy_root = tree = Node(ACTION['buy'])
     for i in range(1, horizon):
         for child in leafs_at(tree, level=i):
+            if random.random() < sample_rate:
+                continue
             if child.value in [ACTION['sell'], ACTION['wait']]:
                 child.add_child(Node(ACTION['wait']))
                 child.add_child(Node(ACTION['buy']))
@@ -110,6 +112,8 @@ def state_generator(states, horizon=10):
     wait_root = tree = Node(ACTION['wait'])
     for i in range(1, horizon):
         for child in leafs_at(tree, level=i):
+            if random.random() < sample_rate:
+                continue
             if child.value in [ACTION['sell'], ACTION['wait']]:
                 child.add_child(Node(ACTION['wait']))
                 child.add_child(Node(ACTION['buy']))
@@ -124,7 +128,6 @@ def state_generator(states, horizon=10):
 
     for i in range(len(states) + 1 - horizon):
         state_chunk = states[i:i + horizon]
-        #print('gen state for', state_chunk)
         for node in results():
             actions = list(map(lambda n: (n.value,), node.path()))
             chunk = state_chunk[0:len(actions)]
@@ -139,8 +142,7 @@ def state_generator(states, horizon=10):
                 change, bollinger, action = state
                 if owns == OWN['true']:
                     ret = (1 + ret) * (1 + change) - 1
-                if random.randint(0,1000000000) == 0:
-                    yield change, bollinger, owns, ret, action
+                yield change, bollinger, owns, ret, action
                 if action == ACTION['buy']:
                     owns = OWN['true']
                     ret = 0
@@ -196,7 +198,6 @@ class Learner(trading.rl.Q):
                 b = 'abv'
             elif bollinger == 2:
                 b = 'bel'
-            print(b, owns, revmap[str(action)])
             if action == DACTION['buy']:
                 owns = OWN['true']
                 ret = 0

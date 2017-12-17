@@ -37,7 +37,7 @@ class Q:
         ret = *state, action_indexes[best_action]
         return ret
 
-    def learn(self, states, iterations=10, alpha=0.3, gamma=0.9):
+    def learn(self, states, iterations=10, alpha=0.3, gamma=0.9, callback=None):
         for i in range(iterations):
             print('starting iteration {}'.format(i))
             states_iter = states()
@@ -48,4 +48,6 @@ class Q:
                 s0 = s1
             # include last state
             self.table[self.discretize(s0)] += self.r(s0)
+            if callback is not None:
+                callback()
         # print('table', self.table)
