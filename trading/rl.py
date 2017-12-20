@@ -41,7 +41,10 @@ class Q:
         for i in range(iterations):
             print('starting iteration {}'.format(i))
             states_iter = states()
-            s0 = next(states_iter)
+            try:
+                s0 = next(states_iter)
+            except StopIteration:
+                continue
             for s1 in states_iter:
                 #print(s0)
                 self.update(s0, s1, alpha, gamma)
@@ -51,3 +54,9 @@ class Q:
             if callback is not None:
                 callback()
         # print('table', self.table)
+
+    def store(self, filename):
+        np.save(filename, self.table)
+
+    def load(self, filename):
+        self.table = np.load(filename)

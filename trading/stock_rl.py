@@ -12,17 +12,6 @@ COL = {
     'action': 4,
 }
 
-# index for owning
-OWN = {
-    'false': 'none',
-    'true': 'own',
-}
-
-ROWN = {
-    'none': 0,
-    'own': 1,
-}
-
 # index for action
 ACTION = {
     'promise': 'promise',
@@ -30,6 +19,8 @@ ACTION = {
     'sell': 'sell',
     'wait': 'wait',
 }
+
+DAYS_OWNED_SIZE = 30
 
 # index for action
 DACTION = {
@@ -46,10 +37,27 @@ revmap = {
     '3': 'wait',
 }
 
-def discretize_return(ret):
-    return discretize_change(ret)
+
+discrete_changes = [
+    -0.013705409864274043,
+    -0.007994551909556669,
+    -0.004127470678394696,
+    -0.001805747215627207,
+    0.00038355921955979255,
+    0.0028797863193601447,
+    0.005756997975481681,
+    0.009824218198390078,
+    0.015323150458234291,
+]
 
 def discretize_change(change):
+    for i, bound in enumerate(discrete_changes):
+        if change < bound:
+            return i
+    return len(discrete_changes)
+
+
+def discretize_return(change):
     if -0.005 < change < 0:
         x = 11
     elif 0 <= change < 0.005:
@@ -82,11 +90,8 @@ def discretize_action(action):
     # return None in case invalid action
     return DACTION.get(action)
 
-def discretize_owns(owns):
-    if owns == 'none':
-        return 0
-    else:
-        return 1
+def discretize_owns(days):
+    return days
 # states is % change, bollinger, owns, return, action
 #                       b
 #            s                       -
@@ -136,18 +141,20 @@ def state_generator(states, horizon=10, sample_rate=1):
                 zip(chunk, actions)
             )
 
-            owns = OWN['false']
+            days_owned = 0
             ret = 0
             for state in episode:
                 change, bollinger, action = state
-                if owns == OWN['true']:
+                if days_owned > 0:
                     ret = (1 + ret) * (1 + change) - 1
-                yield change, bollinger, owns, ret, action
+                yield change, bollinger, days_owned, ret, action
                 if action == ACTION['buy']:
-                    owns = OWN['true']
+                    days_owned = 1
                     ret = 0
                 elif action == ACTION['sell']:
-                    owns = OWN['false']
+                    days_owned = 0
+                elif action == ACTION['promise'] and days_owned < DAYS_OWNED_SIZE - 1:
+                    days_owned += 1
 
 def reward(state):
     ret = 0
@@ -157,7 +164,7 @@ def reward(state):
     return ret
 
 def actions_filter(state):
-    if state[COL['owns']] == ROWN['own']:
+    if state[COL['owns']] > 0:
         return (DACTION['sell'], DACTION['promise'],)
     else:
         return (DACTION['wait'], DACTION['buy'],)
@@ -176,7 +183,8 @@ def discretize(state):
 class Learner(trading.rl.Q):
 
     def __init__(self, table=None):
-        shape = (12, 3, 2, 12, 4,)
+        shape = (11, 3, DAYS_OWNED_SIZE, 12, 4,)
+        print('shape', shape)
         super(Learner, self).__init__(
             reward,
             shape,
@@ -188,9 +196,9 @@ class Learner(trading.rl.Q):
     def predict(self, states):
         total_return = 0
         ret = 0
-        owns = OWN['false']
+        owns = 0
         for change, bollinger in states:
-            if owns == OWN['true']:
+            if owns > 0:
                 ret = (1 + ret) * (1 + change) - 1
             *_, action = self.argmax(self.discretize((change, bollinger, owns, ret, None,)))
             b = 'mid'
@@ -199,10 +207,12 @@ class Learner(trading.rl.Q):
             elif bollinger == 2:
                 b = 'bel'
             if action == DACTION['buy']:
-                owns = OWN['true']
+                owns = 1
                 ret = 0
             elif action == DACTION['sell']:
-                owns = OWN['false']
+                owns = 0
                 total_return += ret
                 ret = 0
+            elif action == DACTION['promise']:
+                owns += 1
         print('total return', total_return)
