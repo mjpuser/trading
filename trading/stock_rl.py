@@ -16,11 +16,11 @@ COL = {
 ACTION = {
     'promise': 'promise',
     'buy': 'buy',
-    'sell': 'sell',
     'wait': 'wait',
+    'sell': 'sell',
 }
 
-DAYS_OWNED_SIZE = 30
+DAYS_OWNED_SIZE = 2
 
 # index for action
 DACTION = {
@@ -34,7 +34,7 @@ revmap = {
     '0': 'promise',
     '1': 'buy',
     '2': 'sell',
-    '3': 'wait',
+    '3': 'wait'
 }
 
 
@@ -88,78 +88,49 @@ def discretize_return(change):
 
 def discretize_action(action):
     # return None in case invalid action
-    return DACTION.get(action)
+    return action
 
 def discretize_owns(days):
-    return days
+    return min(days, DAYS_OWNED_SIZE - 1)
 # states is % change, bollinger, owns, return, action
-#                       b
-#            s                       -
-#            b       -           s       -
-#          s      b              b -   s   -
-#               s              s          s
-
-def state_generator(states, horizon=10, sample_rate=1):
-    leafs_at = trading.lib.tree.Searcher.leafs_at
-    Node = trading.lib.tree.Node
-    buy_root = tree = Node(ACTION['buy'])
-    for i in range(1, horizon):
-        for child in leafs_at(tree, level=i):
-            if random.random() < sample_rate:
-                continue
-            if child.value in [ACTION['sell'], ACTION['wait']]:
-                child.add_child(Node(ACTION['wait']))
-                child.add_child(Node(ACTION['buy']))
-            elif child.value in [ACTION['buy'], ACTION['promise']]:
-                child.add_child(Node(ACTION['sell']))
-                child.add_child(Node(ACTION['promise']))
-
-    wait_root = tree = Node(ACTION['wait'])
-    for i in range(1, horizon):
-        for child in leafs_at(tree, level=i):
-            if random.random() < sample_rate:
-                continue
-            if child.value in [ACTION['sell'], ACTION['wait']]:
-                child.add_child(Node(ACTION['wait']))
-                child.add_child(Node(ACTION['buy']))
-            elif child.value in [ACTION['buy'], ACTION['promise']]:
-                child.add_child(Node(ACTION['promise']))
-                child.add_child(Node(ACTION['sell']))
-
-    results = lambda: itertools.chain(
-        trading.lib.tree.Searcher.search(buy_root, value=ACTION['sell']),
-        trading.lib.tree.Searcher.search(wait_root, value=ACTION['sell'])
-    )
-
-    for i in range(len(states) + 1 - horizon):
-        state_chunk = states[i:i + horizon]
-        for node in results():
-            actions = list(map(lambda n: (n.value,), node.path()))
-            chunk = state_chunk[0:len(actions)]
-            episode = map(
-                lambda s: itertools.chain.from_iterable(s),
-                zip(chunk, actions)
-            )
-
-            days_owned = 0
+# b - - - s b - - - s
+# - b - - - s b - - - s
+# - - b - - - s b - - - s
+# - - - b - - - s b - - - s
+# - - - - b - - - s b - - - s
+# b - - - s - - - b
+def state_generator(states, learner, randomness=1):
+    ret = 0
+    days_owned = 0
+    for state in states:
+        change, bollinger = state
+        if days_owned > 0:
+            ret = (1 + ret) * (1 + change) - 1
+        prefix = (change, bollinger, days_owned, ret,)
+        allowed_actions = actions_filter(prefix)
+        if random.random() < randomness:
+            action = random.choice(allowed_actions)
+        else:
+            *_, action = learner.argmax(learner.discretize((change, bollinger, days_owned, ret, None)))
+        yield change, bollinger, days_owned, ret, action
+        # print('----------------')
+        # print('change', change)
+        # print('bollinger', bollinger)
+        # print('owned', days_owned)
+        # print('return', ret)
+        # print('action', revmap[str(action)], allowed_actions)
+        if action == DACTION['buy']:
+            days_owned = 1
             ret = 0
-            for state in episode:
-                change, bollinger, action = state
-                if days_owned > 0:
-                    ret = (1 + ret) * (1 + change) - 1
-                yield change, bollinger, days_owned, ret, action
-                if action == ACTION['buy']:
-                    days_owned = 1
-                    ret = 0
-                elif action == ACTION['sell']:
-                    days_owned = 0
-                elif action == ACTION['promise'] and days_owned < DAYS_OWNED_SIZE - 1:
-                    days_owned += 1
+        elif action == DACTION['sell']:
+            days_owned = 0
+        elif action == DACTION['promise'] and days_owned < DAYS_OWNED_SIZE - 1:
+            days_owned += 1
 
 def reward(state):
     ret = 0
     action = state[COL['action']]
-    if action == ACTION['sell']:
+    if action == DACTION['sell']:
         ret = state[COL['return']]
     return ret
 
@@ -184,7 +155,6 @@ class Learner(trading.rl.Q):
 
     def __init__(self, table=None):
         shape = (11, 3, DAYS_OWNED_SIZE, 12, 4,)
-        print('shape', shape)
         super(Learner, self).__init__(
             reward,
             shape,
@@ -213,6 +183,10 @@ class Learner(trading.rl.Q):
                 owns = 0
                 total_return += ret
                 ret = 0
-            elif action == DACTION['promise']:
+            elif action == DACTION['promise'] and owns < DAYS_OWNED_SIZE - 1:
                 owns += 1
-        print('total return', total_return)
+            *disc, _ = self.discretize((change, bollinger, owns, ret, None,))
+            # print((b, owns, ret, revmap[str(action)],))
+
+        # print('total_return', total_return)
+        return total_return
