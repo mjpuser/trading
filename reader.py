@@ -2,17 +2,18 @@ import trading.stock_rl
 import pandas as pd
 import os
 
-window_size = 20
-num_of_std = 1.2
+window_size = 10
+num_of_std = 1.8
 test_size = 365
-iterations = 5000
+iterations = 1000
 randomness = 1
+delta_randomness = 1.005
 alpha = 0.001
 gamma = 1
 #filename = 'goog.npy'
 filename = None
 filepath = './qtables/{}'.format(filename)
-stock = 'VZ'
+stock = 'GOOG'
 
 learner = trading.stock_rl.Learner()
 #df = pd.read_csv('/Users/mattp/Downloads/AMD.csv')
@@ -63,22 +64,23 @@ xdata = []
 ydata = []
 def callback():
     global count
-    ret = learner.predict(test_data)
+    output = (count + 1 == iterations)
+    total, ret = learner.predict(test_data, output)
     xdata.append(count)
-    ydata.append(ret)
+    ydata.append(total + ret)
     # learner.store('./qtables/{}-nnnewtable'.format(count))
     count = count + 1
     if count < 100:
-        print('iteration', count, 'return', ret, 'rando', randomness)
+        print('iteration', count, 'total', total, 'holding', ret, 'rando', randomness)
     if count % (iterations / 100.0) == 0:
-        print('iteration', count, 'return', ret, 'rando', randomness)
+        print('iteration', count, 'total', total, 'holding', ret, 'rando', randomness)
     #if count == iterations:
         # learner.store('./qtables/goog')
 
 
 def state_gen():
     global randomness
-    randomness = randomness / 1.0001
+    randomness = randomness / delta_randomness
     return trading.stock_rl.state_generator(train_data, learner, randomness)
 
 learner.learn(
@@ -93,7 +95,7 @@ learner.learn(
 from bokeh.plotting import figure, output_file, show
 
 # output to static HTML file
-output_file("graphs/lines.html")
+output_file("graphs/{}.html".format(stock))
 
 # create a new plot with a title and axis labels
 p = figure(title=stock, x_axis_label='x', y_axis_label='y')

@@ -58,6 +58,7 @@ def discretize_change(change):
 
 
 def discretize_return(change):
+    return discretize_change(change)
     if -0.005 < change < 0:
         x = 11
     elif 0 <= change < 0.005:
@@ -163,7 +164,7 @@ class Learner(trading.rl.Q):
             table
         )
 
-    def predict(self, states):
+    def predict(self, states, output=False):
         total_return = 0
         ret = 0
         owns = 0
@@ -171,6 +172,8 @@ class Learner(trading.rl.Q):
             if owns > 0:
                 ret = (1 + ret) * (1 + change) - 1
             *_, action = self.argmax(self.discretize((change, bollinger, owns, ret, None,)))
+            if output:
+                print('discretized', _)
             b = 'mid'
             if bollinger == 1:
                 b = 'abv'
@@ -186,7 +189,8 @@ class Learner(trading.rl.Q):
             elif action == DACTION['promise'] and owns < DAYS_OWNED_SIZE - 1:
                 owns += 1
             *disc, _ = self.discretize((change, bollinger, owns, ret, None,))
-            # print((b, owns, ret, revmap[str(action)],))
+            if output:
+                print((b, owns, change, ret, revmap[str(action)],))
 
         # print('total_return', total_return)
-        return total_return
+        return total_return, ret
