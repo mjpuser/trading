@@ -8,8 +8,9 @@ COL = {
     'change': 0,
     'bollinger': 1,
     'owns': 2,
-    'return': 3,
-    'action': 4,
+    'buystate': 3,
+    'return': 4,
+    'action': 5,
 }
 
 # index for action
@@ -66,7 +67,7 @@ def state_generator(states, learner, randomness=1):
 def reward(state):
     ret = 0
     action = state[COL['action']]
-    if action == ACTION['sell']:
+    if action == 'sell':
         ret = state[COL['return']]
     return ret
 
@@ -113,8 +114,6 @@ class Learner(trading.rl.Q):
             if owns:
                 ret = (1 + ret) * (1 + change) - 1
             *_, action = self.argmax(self.discretize((change, bollinger, owns, buystate, ret, None,)))
-            if output:
-                print('discretized', _)
             if action == 'buy':
                 owns = True
                 ret = 0
@@ -122,9 +121,8 @@ class Learner(trading.rl.Q):
                 owns = False
                 total_return += ret
                 ret = 0
-            *disc, _ = self.discretize((change, bollinger, owns, ret, None,))
             if output:
-                print((b, owns, change, ret, revmap[str(action)],))
+                print((bollinger, buystate, ret, action,))
 
         # print('total_return', total_return)
         return total_return, ret

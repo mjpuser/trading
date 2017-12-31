@@ -76,3 +76,16 @@ class StateGeneratorTestCase(unittest.TestCase):
             *expected, action = expected
             *state, action = state
             self.assertEqual(state, expected)
+
+    def test_reward(self):
+        value = 1
+        state = (
+            0.01,
+            'inside',
+            True,
+            None,
+            value,
+            'sell',
+        )
+        actual = trading.stock_rl.reward(state)
+        self.assertEqual(actual, value)
