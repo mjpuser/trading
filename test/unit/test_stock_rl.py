@@ -88,4 +88,19 @@ class StateGeneratorTestCase(unittest.TestCase):
             'sell',
         )
         actual = trading.stock_rl.reward(state)
+        expected = value
         self.assertEqual(actual, value)
+
+    def test_no_reward(self):
+        value = 1
+        state = (
+            0.01,
+            'inside',
+            True,
+            None,
+            value,
+            'wait',
+        )
+        actual = trading.stock_rl.reward(state)
+        expected = 0
+        self.assertEqual(actual, expected)
