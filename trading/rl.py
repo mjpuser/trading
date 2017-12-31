@@ -36,7 +36,8 @@ class Q:
         allowed_states = (*state, action_indexes)
         # print('allowed', allowed_states, 'action indexes', action_indexes)
         # print('table2', self.table[allowed_states])
-        # print('allowed', allowed_states)
+        # print('allowed', allowed_states, self.table.shape)
+
         best_action = np.argmax(self.table[allowed_states])
         #print('chose', best_action, 'mapping with', action_indexes)
         ret = *state, action_indexes[best_action]

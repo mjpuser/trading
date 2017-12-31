@@ -19,6 +19,7 @@ ACTION = {
     'sell': 2,
     'wait': 3,
 }
+RACTION = list(ACTION.keys())
 
 BOLLINGER = {
     'inside': 0, # inside
@@ -26,51 +27,54 @@ BOLLINGER = {
     'dipped': 2, # went from below to inside
     'above': 3, # above the band
     'returned': 4, # went from above to inside
+    'None': 5,
 }
-
-revmap = list(ACTION.keys())
+RBOLLINGER = list(BOLLINGER.keys())
 
 def discretize_action(action):
     # return None in case invalid action
-    return ACTION[action]
+    return ACTION.get(action)
 
 def discretize_owns(owns):
-    return owns
+    return 1 if owns else 0
 
 def state_generator(states, learner, randomness=1):
     ret = 0
-    days_owned = 0
+    owns = False
+    buystate = None
     for state in states:
         change, bollinger = state
-        if days_owned > 0:
+        if owns:
             ret = (1 + ret) * (1 + change) - 1
-        prefix = (change, bollinger, days_owned, ret,)
+        prefix = (change, bollinger, owns, ret,)
         allowed_actions = actions_filter(prefix)
         if random.random() < randomness:
             action = random.choice(allowed_actions)
         else:
-            *_, action = learner.argmax(learner.discretize((change, bollinger, days_owned, ret, None)))
-        yield change, bollinger, days_owned, ret, action
-        if action == DACTION['buy']:
-            days_owned = 1
+            dstate = learner.discretize((change, bollinger, owns, buystate, ret, None,))
+            *_, action = learner.argmax(dstate)
+            action = RACTION[action]
+        yield change, bollinger, owns, buystate, ret, action
+        if action == 'buy':
+            owns = True
+            buystate = bollinger
+        elif action == 'sell':
+            owns = False
+            buystate = None
             ret = 0
-        elif action == DACTION['sell']:
-            days_owned = 0
-        elif action == DACTION['promise'] and days_owned < DAYS_OWNED_SIZE - 1:
-            days_owned += 1
 
 def reward(state):
     ret = 0
     action = state[COL['action']]
-    if action == DACTION['sell']:
+    if action == ACTION['sell']:
         ret = state[COL['return']]
     return ret
 
 def actions_filter(state):
-    if state[COL['owns']] > 0:
-        return (DACTION['sell'], DACTION['promise'],)
+    if state[COL['owns']]:
+        return (ACTION['sell'], ACTION['promise'],)
     else:
-        return (DACTION['wait'], DACTION['buy'],)
+        return (ACTION['wait'], ACTION['buy'],)
 
 def discretize(state):
     # change, bollinger, owns, buystate, return, action
@@ -78,7 +82,7 @@ def discretize(state):
     return (
         BOLLINGER[bollinger],
         discretize_owns(owns),
-        BOLLINGER[buystate],
+        BOLLINGER[str(buystate)],
         discretize_action(action),
     )
 
@@ -86,7 +90,12 @@ def discretize(state):
 class Learner(trading.rl.Q):
 
     def __init__(self, table=None):
-        shape = (11, 3, DAYS_OWNED_SIZE, 12, 4,)
+        shape = (
+            len(BOLLINGER.keys()),
+            2,
+            len(BOLLINGER.keys()),
+            len(ACTION.keys()),
+        )
         super(Learner, self).__init__(
             reward,
             shape,
@@ -98,27 +107,21 @@ class Learner(trading.rl.Q):
     def predict(self, states, output=False):
         total_return = 0
         ret = 0
-        owns = 0
+        owns = False
+        buystate = None
         for change, bollinger in states:
-            if owns > 0:
+            if owns:
                 ret = (1 + ret) * (1 + change) - 1
-            *_, action = self.argmax(self.discretize((change, bollinger, owns, ret, None,)))
+            *_, action = self.argmax(self.discretize((change, bollinger, owns, buystate, ret, None,)))
             if output:
                 print('discretized', _)
-            b = 'mid'
-            if bollinger == 1:
-                b = 'abv'
-            elif bollinger == 2:
-                b = 'bel'
-            if action == DACTION['buy']:
-                owns = 1
+            if action == 'buy':
+                owns = True
                 ret = 0
-            elif action == DACTION['sell']:
-                owns = 0
+            elif action == 'sell':
+                owns = False
                 total_return += ret
                 ret = 0
-            elif action == DACTION['promise'] and owns < DAYS_OWNED_SIZE - 1:
-                owns += 1
             *disc, _ = self.discretize((change, bollinger, owns, ret, None,))
             if output:
                 print((b, owns, change, ret, revmap[str(action)],))
