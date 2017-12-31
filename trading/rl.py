@@ -39,9 +39,9 @@ class Q:
         # print('allowed', allowed_states, self.table.shape)
 
         best_action = np.argmax(self.table[allowed_states])
-        #print('chose', best_action, 'mapping with', action_indexes)
+        #print('chose', best_action, 'mapping with', action_indexes, state)
         ret = *state, action_indexes[best_action]
-        # print('argmax', ret)
+        #print('argmax', ret)
         return ret
 
     def learn(self, states, iterations=10, alpha=0.3, gamma=0.9, callback=None):

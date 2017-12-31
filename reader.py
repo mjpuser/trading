@@ -1,19 +1,20 @@
 import trading.stock_rl
 import pandas as pd
 import os
+import sys
 
 window_size = 10
-num_of_std = 1.8
-test_size = 365
+num_of_std = 1.2
+test_size = 30
 iterations = 1000
 randomness = 1
 delta_randomness = 1.005
-alpha = 0.001
+alpha = 0.0001
 gamma = 1
 #filename = 'goog.npy'
 filename = None
 filepath = './qtables/{}'.format(filename)
-stock = 'GOOG'
+stock = sys.argv[1] or 'GOOG'
 
 learner = trading.stock_rl.Learner()
 #df = pd.read_csv('/Users/mattp/Downloads/AMD.csv')
@@ -34,12 +35,22 @@ rolling_std = stock_price.rolling(window=window_size).std()
 df['upper'] = upper_band = rolling_mean + (rolling_std * num_of_std)
 df['lower'] = lower_band = rolling_mean - (rolling_std * num_of_std)
 
+previous_bollinger = None
 def bollinger(row):
-    x = 0
+    global previous_bollinger
+    x = 'inside'
     if row['upper'] < row['Close']:
-        x = 1
+        x = 'above'
     elif row['lower'] > row['Close']:
-        x = 2
+        x = 'below'
+
+    if previous_bollinger == 'above' and x == 'inside':
+        x = 'dipped'
+    elif previous_bollinger == 'below' and x == 'inside':
+        x = 'returned'
+
+    previous_bollinger = x
+
     return x
 
 df['bollinger'] = df.apply(bollinger, axis=1)

@@ -13,6 +13,9 @@ COL = {
     'action': 5,
 }
 
+DCOL = {
+    'owns': 1
+}
 # index for action
 ACTION = {
     'promise': 0,
@@ -47,14 +50,14 @@ def state_generator(states, learner, randomness=1):
         change, bollinger = state
         if owns:
             ret = (1 + ret) * (1 + change) - 1
-        prefix = (change, bollinger, owns, ret,)
-        allowed_actions = actions_filter(prefix)
+        prestate = (change, bollinger, owns, buystate, ret, None)
+        dprestate = discretize(prestate)
         if random.random() < randomness:
-            action = random.choice(allowed_actions)
+            allowed_actions = actions_filter(dprestate)
+            action = random.choice(list(allowed_actions))
         else:
-            dstate = learner.discretize((change, bollinger, owns, buystate, ret, None,))
-            *_, action = learner.argmax(dstate)
-            action = RACTION[action]
+            *_, action = learner.argmax(dprestate)
+        action = RACTION[action]
         yield change, bollinger, owns, buystate, ret, action
         if action == 'buy':
             owns = True
@@ -71,8 +74,8 @@ def reward(state):
         ret = state[COL['return']]
     return ret
 
-def actions_filter(state):
-    if state[COL['owns']]:
+def actions_filter(dstate):
+    if dstate[DCOL['owns']] == 1:
         return (ACTION['sell'], ACTION['promise'],)
     else:
         return (ACTION['wait'], ACTION['buy'],)
@@ -113,16 +116,19 @@ class Learner(trading.rl.Q):
         for change, bollinger in states:
             if owns:
                 ret = (1 + ret) * (1 + change) - 1
-            *_, action = self.argmax(self.discretize((change, bollinger, owns, buystate, ret, None,)))
-            if action == 'buy':
+            state = (change, bollinger, owns, buystate, ret, None,)
+            *_, action = self.argmax(self.discretize(state))
+            if action == ACTION['buy']:
                 owns = True
                 ret = 0
-            elif action == 'sell':
+                buystate = bollinger
+            elif action == ACTION['sell']:
                 owns = False
                 total_return += ret
                 ret = 0
+                buystate = None
             if output:
-                print((bollinger, buystate, ret, action,))
+                print('output', state, RACTION[action])
 
         # print('total_return', total_return)
         return total_return, ret
