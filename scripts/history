@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+while read symbol
+do
+    scripts/stock $symbol > data/history/${symbol}.csv
+done < /dev/stdin

@@ -14,7 +14,9 @@ COL = {
 }
 
 DCOL = {
-    'owns': 1
+    'bollinger': 0,
+    'owns': 1,
+    'buystate': 2,
 }
 # index for action
 ACTION = {
@@ -28,9 +30,9 @@ RACTION = list(ACTION.keys())
 BOLLINGER = {
     'inside': 0, # inside
     'below': 1, # below the band
-    'dipped': 2, # went from below to inside
+    'dipped': 2, # went from above to inside
     'above': 3, # above the band
-    'returned': 4, # went from above to inside
+    'returned': 4, # went from below to inside
     'None': 5,
 }
 RBOLLINGER = list(BOLLINGER.keys())
@@ -75,10 +77,15 @@ def reward(state):
     return ret
 
 def actions_filter(dstate):
-    if dstate[DCOL['owns']] == 1:
-        return (ACTION['sell'], ACTION['promise'],)
+    if dstate[DCOL['owns']] == 1 and dstate[DCOL['bollinger']] == BOLLINGER['dipped']:
+        return (ACTION['sell'],)
+    elif dstate[DCOL['owns']] == 1:
+        return (ACTION['promise'],)
+    elif dstate[DCOL['owns']] == 0 and dstate[DCOL['bollinger']] == BOLLINGER['returned']:
+        return (ACTION['buy'],)
     else:
-        return (ACTION['wait'], ACTION['buy'],)
+        return (ACTION['wait'],)
+
 
 def discretize(state):
     # change, bollinger, owns, buystate, return, action
@@ -113,7 +120,9 @@ class Learner(trading.rl.Q):
         ret = 0
         owns = False
         buystate = None
-        for change, bollinger in states:
+        buys = []
+        sells = []
+        for i, (change, bollinger,) in enumerate(states):
             if owns:
                 ret = (1 + ret) * (1 + change) - 1
             state = (change, bollinger, owns, buystate, ret, None,)
@@ -122,13 +131,27 @@ class Learner(trading.rl.Q):
                 owns = True
                 ret = 0
                 buystate = bollinger
+                buys.append(i)
             elif action == ACTION['sell']:
                 owns = False
                 total_return += ret
                 ret = 0
                 buystate = None
+                sells.append(i)
             if output:
                 print('output', state, RACTION[action])
 
         # print('total_return', total_return)
-        return total_return, ret
+        return total_return, ret, buys, sells
+
+    def is_buy(self, state):
+        *_, action = self.argmax(self.discretize(state))
+        return ACTION['buy'] == action
+
+    def is_sell(self, state):
+        *_, action = self.argmax(self.discretize(state))
+        return ACTION['sell'] == action
+
+def calculate_return(state):
+    change, _, _, _, ret, *_ = state
+    return (1 + ret) * (1 + change) - 1

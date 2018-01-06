@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+TODAY=`date +%Y%m%d`
+curl https://marketdata.websol.barchart.com/getHistory.csv \
+    -G \
+    -s \
+    -XGET \
+    -d apikey=$BARCHART_KEY \
+    -d symbol=$1 \
+    -d type=daily \
+    -d splits=1 \
+    -d dividends=1 \
+    -d startDate=20100101 \
+    -d endDate=${TODAY}

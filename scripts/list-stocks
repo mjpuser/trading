@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+
+dl () {
+    curl 'http://www.nasdaq.com/screening/companies-by-name.aspx' \
+        -G \
+        -s \
+        -d render=download \
+        -d letter=$1
+}
+
+for letter in {A..Z}
+do
+    dl ${letter} \
+        | tail -n +2 \
+        | cut -d'"' -f2 \
+        | grep -v '\^' \
+        | grep -v '\.' \
+        > data/stock-names/${letter}.txt
+done
+
+rm data/stock-names/all.txt
+
+for letter in {A..Z}
+do
+    cat data/stock-names/${letter}.txt >> data/stock-names/all.txt
+done

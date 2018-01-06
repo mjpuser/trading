@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import random
+import sys
+
+with open('data/stock-names/all.txt') as symbols:
+    lines = symbols.readlines()
+    symbols = set()
+    while len(symbols) < 1000:
+        symbol = lines[random.randrange(len(lines))].strip()
+        symbols.add(symbol)
+    for symbol in symbols:
+        print(symbol)
