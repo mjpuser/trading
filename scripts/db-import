@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+while read symbol
+do
+    lc_symbol=$(echo ${symbol} | tr '[:upper:]' '[:lower:]')
+    echo ".import data/history/${symbol}.csv ${lc_symbol}" | sqlite3 -csv data/trading.db
+done < /dev/stdin

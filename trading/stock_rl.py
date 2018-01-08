@@ -144,13 +144,11 @@ class Learner(trading.rl.Q):
         # print('total_return', total_return)
         return total_return, ret, buys, sells
 
-    def is_buy(self, state):
-        *_, action = self.argmax(self.discretize(state))
-        return ACTION['buy'] == action
+    def is_buy(self, bollinger, momentum):
+        return bollinger == 'returned'
 
-    def is_sell(self, state):
-        *_, action = self.argmax(self.discretize(state))
-        return ACTION['sell'] == action
+    def is_sell(self, bollinger, momentum):
+        return bollinger == 'dipped'
 
 def calculate_return(state):
     change, _, _, _, ret, *_ = state

@@ -5,7 +5,7 @@ import sys
 
 window_size = 20
 num_of_std = 1.5
-test_size = 252 # number of trading days in a year
+test_size = 30 # number of trading days in a year
 iterations = 1
 randomness = 0
 delta_randomness = 1.005
@@ -50,7 +50,7 @@ def bollinger(row):
 
 df['bollinger'] = df.apply(bollinger, axis=1)
 
-get_data = lambda r: (r['change'], r['bollinger'])
+get_data = lambda r: (r['change'], r['bollinger'], r['tradingDay'])
 train_data = df[window_size:-test_size].apply(get_data, axis=1)
 test_data = df[-test_size:].apply(get_data, axis=1)
 
@@ -64,9 +64,9 @@ test_data = df[-test_size:].apply(get_data, axis=1)
 # print(s)
 # for i in range(126, 1260, 126):
 #     print(i, s[i])
-total, ret, buys, sells = learner.predict(test_data)
-print(stock, 'total: {}, return: {}'.format(total, ret))
-
+# total, ret, buys, sells = learner.predict(test_data)
+# print(stock, 'total: {}, return: {}'.format(total, ret))
+print(test_data)
 # count = 0
 # xdata = []
 # ydata = []
@@ -98,31 +98,31 @@ print(stock, 'total: {}, return: {}'.format(total, ret))
 #     alpha=alpha,
 #     gamma=gamma
 # )
-
-from bokeh.plotting import figure, output_file, show
-from bokeh.models import Span
-
-# output to static HTML file
-output_file("graphs/{}.html".format(stock))
-
-# create a new plot with a title and axis labels
-p = figure(title=stock, x_axis_label='x', y_axis_label='y')
-
-# add a line renderer with legend and line thickness
-graph_data = df[-test_size:]
-ydata = list(graph_data['close'])
-xdata = [x for x in range(test_size)]
-p.line(xdata, ydata, legend="Temp.", line_width=2)
-
-for buy in buys:
-    buy_span = Span(location=buy, dimension='height', line_color='green', line_dash='dashed', line_width=1)
-    p.add_layout(buy_span)
-
-for sell in sells:
-    sell_span = Span(location=sell, dimension='height', line_color='red', line_dash='dashed', line_width=1)
-    p.add_layout(sell_span)
-# show the results
-show(p)
+#
+# from bokeh.plotting import figure, output_file, show
+# from bokeh.models import Span
+#
+# # output to static HTML file
+# output_file("graphs/{}.html".format(stock))
+#
+# # create a new plot with a title and axis labels
+# p = figure(title=stock, x_axis_label='x', y_axis_label='y')
+#
+# # add a line renderer with legend and line thickness
+# graph_data = df[-test_size:]
+# ydata = list(graph_data['close'])
+# xdata = [x for x in range(test_size)]
+# p.line(xdata, ydata, legend="Temp.", line_width=2)
+#
+# for buy in buys:
+#     buy_span = Span(location=buy, dimension='height', line_color='green', line_dash='dashed', line_width=1)
+#     p.add_layout(buy_span)
+#
+# for sell in sells:
+#     sell_span = Span(location=sell, dimension='height', line_color='red', line_dash='dashed', line_width=1)
+#     p.add_layout(sell_span)
+# # show the results
+# show(p)
 
 
 # map raw data to data with technical indicators
