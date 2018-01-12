@@ -3,5 +3,6 @@
 while read symbol
 do
     lc_symbol=$(echo ${symbol} | tr '[:upper:]' '[:lower:]')
-    echo ".import data/history/${symbol}.csv ${lc_symbol}" | sqlite3 -csv data/trading.db
+    echo "importing ${symbol}"
+    echo ".import data/history/${symbol}.csv ${lc_symbol}_stock" | sqlite3 -csv data/trading.db
 done < /dev/stdin

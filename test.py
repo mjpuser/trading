@@ -1,5 +1,5 @@
 import trading.broker
 
-broker = trading.broker.Broker(25)
+broker = trading.broker.Broker(30)
 
-broker.iterate('2017-01-01')
+broker.iterate('2017-02-10')

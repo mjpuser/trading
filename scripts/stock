@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 
-TODAY=`date +%Y%m%d`
-curl https://marketdata.websol.barchart.com/getHistory.csv \
-    -G \
-    -s \
-    -XGET \
-    -d apikey=$BARCHART_KEY \
-    -d symbol=$1 \
-    -d type=daily \
-    -d splits=1 \
-    -d dividends=1 \
-    -d startDate=20100101 \
-    -d endDate=${TODAY}
+TODAY=`date +%s`
+if [ -z "$2" ]
+then
+    START_DATE=${TODAY}
+else
+    START_DATE=$(date -j -f '%Y-%m-%d' $2 +%s)
+fi
+QUERY="period1=${START_DATE}"
+QUERY="${QUERY}&period2=${TODAY}"
+QUERY="${QUERY}&interval=1d"
+QUERY="${QUERY}&events=history"
+QUERY="${QUERY}&crumb=${YAHOO_CRUMB}"
+
+curl -s "https://query1.finance.yahoo.com/v7/finance/download/$1?${QUERY}" \
+    -H"cookie: ${YAHOO_COOKIE}"

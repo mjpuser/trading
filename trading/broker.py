@@ -7,37 +7,53 @@ trading.db.init()
 
 
 window = float(20)
-std_multiplier = 1.5
+std_multiplier = 1.55
 
-def ema(curr_price, prev_ema, window):
-    k = 2.0 / (window + 1)
+def reduce(fn, arr, prev):
+    for val in arr:
+        prev = fn(prev, val)
+    return prev
+
+def ema(prev_ema, curr_price, period_size):
+    k = 2.0 / (period_size + 1)
     return (curr_price * k) + (prev_ema * (1 - k))
 
-def macd(curr_price, prev_price):
-
-    pass
+def macd(prices):
+    period_12 = prices[-12:]
+    period_26 = prices
+    ema_12 = reduce(lambda x, y: ema(x, y, 12), period_12[1:], period_12[0])
+    ema_26 = reduce(lambda x, y: ema(x, y, 26), period_26[1:], period_26[0])
+    return ema_12 - ema_26
 
 def process_macd(symbol, day):
-    return 0
-    # long_range = 26
-    # short_range = 12
-    # signal_range = 9
-    # total_rows = long_range + signal_range
-    # records = trading.db.get_last_stock(symbol, day, total_rows)
-    # if len(records) == total_rows:
-    #     records.reverse()
-    #     prices = np.array([float(record['close']) for record in records])
-    #     signals = []
-    #     for i in range(signal_range):
-    #         print('doing ema 26')
-    #         ema_26 = ema(prices[i:long_range + i - 1], long_range)
-    #         print('doing ema 12')
-    #         ema_12 = ema(prices[long_range - short_range + i:long_range + i - 1], short_range)
-    #         signal = ema_12 - ema_26
-    #         signals.append(signal)
-    #     return prices[-1], signal
-    # else:
-    #     return (0, 0)
+    long_range = 26
+    short_range = 12
+    signal_range = 9
+    total_rows = long_range + signal_range + 1
+    records = trading.db.get_last_stock(symbol, day, total_rows)
+    if len(records) == total_rows:
+        records.reverse()
+        prices = [float(record['close']) for record in records]
+        macds = []
+        for i in range(signal_range + 1):
+            p = prices[i:long_range + i]
+            macds.append(macd(p))
+        curr_signal = reduce(lambda x, y: ema(x, y, signal_range), macds[2:], macds[1])
+        prev_signal = reduce(lambda x, y: ema(x, y, signal_range), macds[1:], macds[0])
+        *_, prev_macd, curr_macd = macds
+        if curr_signal < curr_macd and prev_signal > prev_macd:
+            return 'bull'
+        elif curr_signal > curr_macd and prev_signal < prev_macd:
+            return 'bear'
+        elif curr_macd > prev_macd:
+            return 'up'
+        elif curr_macd < prev_macd:
+            return 'down'
+        else:
+            return 'unknown'
+    else:
+        return 0
+
 
 def bollinger(prices):
     close = prices[-1]
@@ -74,8 +90,9 @@ def get_pct_change(symbol, day):
 
 def process(symbol, day):
     bollinger = process_bollinger(symbol, day)
-    momentum = process_macd(symbol, day)
-    return (bollinger, momentum,)
+    #momentum = process_macd(symbol, day)
+    price = float(trading.db.get_stock(symbol, day)['close'])
+    return (bollinger, price)
 
 def get_state(symbol, day):
     pct_change = get_pct_change(symbol, day)
@@ -175,6 +192,7 @@ class Broker:
                 todays_ret = sum([ ret for _, ret in self.holdings.items() ]) / self.size
                 total_ret = calculate_return(total_ret, todays_ret)
                 returns = self.crunch(day)
+                print(self.holdings)
                 print('---> return:', total_ret)
 
 

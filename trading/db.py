@@ -5,7 +5,7 @@ conn = sqlite3.connect('data/trading.db')
 conn.row_factory = sqlite3.Row # return dicts for records
 
 COLUMNS = """
-tradingDay,
+date,
 open,
 high,
 low,
@@ -25,9 +25,10 @@ def get_stock(symbol, day=None):
         SELECT
             {}
         FROM
-            {}
+            {}_stock
         WHERE
-            tradingDay = ?
+            date = ?
+            AND close != 'null'
     """.format(COLUMNS, symbol)
     return c.execute(sql, [day]).fetchone()
 
@@ -36,11 +37,12 @@ def get_last_stock(symbol, day, limit):
         SELECT
             {}
         FROM
-            {}
+            {}_stock
         WHERE
-            tradingDay <= ?
+            date <= ?
+            AND close != 'null'
         ORDER BY
-            tradingDay DESC
+            date DESC
         LIMIT {}
     """.format(COLUMNS, symbol, limit)
     return c.execute(sql, [day]).fetchmany(int(limit))
@@ -48,7 +50,7 @@ def get_last_stock(symbol, day, limit):
 def get_stocks():
     sql = """
         SELECT
-            name
+            replace(name, '_stock', '') as name
         FROM
             sqlite_master
         WHERE
