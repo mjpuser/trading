@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+symbol=$1
+echo "Dropping table ${symbol}_stock"
+echo "drop table ${symbol}_stock" | sqlite3 data/trading.db
+echo "Downloading ${symbol} stock data"
+scripts/stock ${symbol} 2016-11-01 > data/history/${symbol}.csv
+echo ${symbol} | scripts/processor.py

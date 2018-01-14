@@ -4,95 +4,52 @@ import trading.stock_rl
 import trading.db
 
 trading.db.init()
-
-
-window = float(20)
-std_multiplier = 1.55
-
-def reduce(fn, arr, prev):
-    for val in arr:
-        prev = fn(prev, val)
-    return prev
-
-def ema(prev_ema, curr_price, period_size):
-    k = 2.0 / (period_size + 1)
-    return (curr_price * k) + (prev_ema * (1 - k))
-
-def macd(prices):
-    period_12 = prices[-12:]
-    period_26 = prices
-    ema_12 = reduce(lambda x, y: ema(x, y, 12), period_12[1:], period_12[0])
-    ema_26 = reduce(lambda x, y: ema(x, y, 26), period_26[1:], period_26[0])
-    return ema_12 - ema_26
-
-def process_macd(symbol, day):
-    long_range = 26
-    short_range = 12
-    signal_range = 9
-    total_rows = long_range + signal_range + 1
-    records = trading.db.get_last_stock(symbol, day, total_rows)
-    if len(records) == total_rows:
-        records.reverse()
-        prices = [float(record['close']) for record in records]
-        macds = []
-        for i in range(signal_range + 1):
-            p = prices[i:long_range + i]
-            macds.append(macd(p))
-        curr_signal = reduce(lambda x, y: ema(x, y, signal_range), macds[2:], macds[1])
-        prev_signal = reduce(lambda x, y: ema(x, y, signal_range), macds[1:], macds[0])
-        *_, prev_macd, curr_macd = macds
-        if curr_signal < curr_macd and prev_signal > prev_macd:
-            return 'bull'
-        elif curr_signal > curr_macd and prev_signal < prev_macd:
-            return 'bear'
-        elif curr_macd > prev_macd:
-            return 'up'
-        elif curr_macd < prev_macd:
-            return 'down'
-        else:
-            return 'unknown'
-    else:
-        return 0
-
-
-def bollinger(prices):
-    close = prices[-1]
-    mean = np.mean(prices)
-    std = np.std(prices)
-    distance = std * std_multiplier
-    upper = mean + distance
-    lower = mean - distance
-
-    if close > upper:
-        return 'above'
-    elif close < lower:
-        return 'below'
-    return 'inside'
-
-def process_bollinger(symbol, day):
-    records = trading.db.get_last_stock(symbol, day, window + 1)
-    prices = [float(record['close']) for record in records]
-    prices.reverse()
-    if len(records) == int(window) + 1:
-        prev = bollinger(prices[:-1])
-        curr = bollinger(prices[1:])
-        if prev == 'above' and curr == 'inside':
-            return 'dipped'
-        elif prev == 'below' and curr == 'inside':
-            return 'returned'
-    else:
-        return 'inside'
+STD_MULT = 1.55
 
 def get_pct_change(symbol, day):
     curr, prev = trading.db.get_last_stock(symbol, day, 2)
     pct_change = (float(curr['close']) - float(prev['close'])) / float(prev['close'])
     return pct_change
 
+def process_bollinger(symbol, day):
+    records = trading.db.get_last_stock(symbol, day, 2)
+    if len(records) == 2:
+        curr, prev = records
+        prev_close = prev['close']
+        curr_close = curr['close']
+        prev_close_above = (((prev['boll_ub'] - prev['boll']) * STD_MULT) + prev['boll']) < prev['close']
+        prev_close_below = (((prev['boll_lb'] - prev['boll']) * STD_MULT) + prev['boll']) > prev['close']
+        curr_close_dipped = (((curr['boll_ub'] - curr['boll']) * STD_MULT) + curr['boll']) > curr['close']
+        curr_close_return = (((curr['boll_lb'] - curr['boll']) * STD_MULT) + curr['boll']) < curr['close']
+        if prev_close_above and curr_close_dipped:
+            return 'dipped'
+        elif prev_close_below and curr_close_return:
+            return 'returned'
+        else:
+            return 'inside'
+    else:
+        return 'inside'
+
+def process_macd(symbol, day):
+    records = trading.db.get_last_stock(symbol, day, 2)
+    if len(records) == 2:
+        curr, prev = records
+        sell_signal = prev['macd'] > prev['macds'] and curr['macd'] < curr['macds']
+        buy_signal = prev['macd'] < prev['macds'] and curr['macd'] > curr['macds']
+        if buy_signal:
+            return 'buy'
+        elif sell_signal:
+            return 'sell'
+        else:
+            return 'none'
+    else:
+        return 'none'
+
 def process(symbol, day):
     bollinger = process_bollinger(symbol, day)
-    #momentum = process_macd(symbol, day)
+    macd = process_macd(symbol, day)
     price = float(trading.db.get_stock(symbol, day)['close'])
-    return (bollinger, price)
+    return (bollinger, macd, price)
 
 def get_state(symbol, day):
     pct_change = get_pct_change(symbol, day)
@@ -187,7 +144,7 @@ class Broker:
         total_ret = 0
         for day in daterange(start, today):
             day = day.strftime('%Y-%m-%d')
-            if trading.db.get_stock('crl', day) is not None:
+            if trading.db.get_stock('amzn', day) is not None:
                 print('---------', day, '------------')
                 todays_ret = sum([ ret for _, ret in self.holdings.items() ]) / self.size
                 total_ret = calculate_return(total_ret, todays_ret)

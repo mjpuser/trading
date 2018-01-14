@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+import json
+import re
+import requests
+import sys
+
+params = {
+    'tbm': 'fin',
+    'q': '{}:{}'.format(sys.argv[1], sys.argv[2])
+}
+headers = {
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
+    'content-encoding': 'gzip',
+}
+res = requests.get(
+    'https://www.google.com/search',
+    params=params,
+    headers=headers
+)
+match = re.search('data-chart-id="([^"]+)"', res.text)
+
+element_id = match.group(1)
+eid = element_id.replace('fw-uid_', '')[:-2]
+
+match = re.search(' data-mid="([^"]+)"', res.text)
+mid_list = match.group(1)
+
+params = {
+    'eid': eid,
+    'async': 'mid_list:{},period:1Y,interval:86400,extended:false,element_id:{}'.format(mid_list, element_id),
+}
+res = requests.get(
+    'https://www.google.com/async/finance_wholepage_chart',
+    params=params,
+    headers=headers
+)
+
+#print(res.text)
+json_res = json.loads(res.text)
+
+history_str = json_res[1][3][1][0][3][0][5][1]
+prices = json.loads(history_str)[0][2][0][0]
+prices = [ (date, price.replace(',', ''),) for _, _, price, _, date in prices ]
+print('date,close')
+for date, price in prices:
+    print('{},{}'.format(date, float(price)))
+

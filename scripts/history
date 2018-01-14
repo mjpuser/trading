@@ -2,6 +2,12 @@
 
 while read symbol
 do
-    echo "Downloading ${symbol}"
-    scripts/stock $symbol $1 > data/history/${symbol}.csv
+    IS_EXCEPTION=$(comm -12 <(echo ${symbol}) scripts/exceptions.txt)
+    if [[ -z "${IS_EXCEPTION}" ]]
+    then
+        echo "Downloading ${symbol}"
+        scripts/stock $symbol $1 > data/history/${symbol}.csv
+    else
+        echo "Skipping ${symbol}"
+    fi
 done < /dev/stdin

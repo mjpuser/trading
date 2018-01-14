@@ -6,11 +6,12 @@ conn.row_factory = sqlite3.Row # return dicts for records
 
 COLUMNS = """
 date,
-open,
-high,
-low,
 close,
-volume
+macd,
+macds,
+boll,
+boll_ub,
+boll_lb
 """
 
 c = None
@@ -28,7 +29,10 @@ def get_stock(symbol, day=None):
             {}_stock
         WHERE
             date = ?
-            AND close != 'null'
+            AND close is not null
+            AND boll_ub is not null
+            AND boll_lb is not null
+            AND boll is not null 
     """.format(COLUMNS, symbol)
     return c.execute(sql, [day]).fetchone()
 
@@ -40,7 +44,10 @@ def get_last_stock(symbol, day, limit):
             {}_stock
         WHERE
             date <= ?
-            AND close != 'null'
+            AND close is not null
+            AND boll_ub is not null
+            AND boll_lb is not null
+            AND boll is not null 
         ORDER BY
             date DESC
         LIMIT {}

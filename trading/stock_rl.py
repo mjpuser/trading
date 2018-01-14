@@ -144,12 +144,12 @@ class Learner(trading.rl.Q):
         # print('total_return', total_return)
         return total_return, ret, buys, sells
 
-    def is_buy(self, bollinger, price):
-        return bollinger == 'returned'
+    def is_buy(self, bollinger, macd, price):
+        return macd == 'buy'# and bollinger == 'returned'
         #return momentum == 'bull'
 
-    def is_sell(self, bollinger, price):
-        return bollinger == 'dipped'
+    def is_sell(self, bollinger, macd, price):
+        return macd == 'sell'# and bollinger == 'dipped'
         #return momentum == 'bear'
 
 def calculate_return(state):

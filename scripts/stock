@@ -1,17 +1,57 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-TODAY=`date +%s`
-if [ -z "$2" ]
-then
-    START_DATE=${TODAY}
-else
-    START_DATE=$(date -j -f '%Y-%m-%d' $2 +%s)
-fi
-QUERY="period1=${START_DATE}"
-QUERY="${QUERY}&period2=${TODAY}"
-QUERY="${QUERY}&interval=1d"
-QUERY="${QUERY}&events=history"
-QUERY="${QUERY}&crumb=${YAHOO_CRUMB}"
+import csv
+import datetime
+import os
+import io
+import requests
+import sys
 
-curl -s "https://query1.finance.yahoo.com/v7/finance/download/$1?${QUERY}" \
-    -H"cookie: ${YAHOO_COOKIE}"
+start_date = today = datetime.datetime.today()
+if len(sys.argv) == 3:
+    start_date = datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d')
+
+params = {
+    'period1': start_date.strftime('%s'),
+    'period2': today.strftime('%s'),
+    'interval': '1d',
+    'crumb': os.environ['YAHOO_CRUMB']
+}
+history_params = {
+    **params,
+    'events': 'history'
+}
+split_params = {
+    **params,
+    'events': 'split'
+}
+headers = {
+    'cookie': os.environ['YAHOO_COOKIE']
+}
+history_res = requests.get(
+    'https://query1.finance.yahoo.com/v7/finance/download/{}'.format(sys.argv[1]),
+    params=history_params,
+    headers=headers
+).content.decode('utf-8')
+
+splits_res = requests.get(
+    'https://query1.finance.yahoo.com/v7/finance/download/{}'.format(sys.argv[1]),
+    params=split_params,
+    headers=headers
+).content.decode('utf-8')
+
+splits = list(csv.DictReader(io.StringIO(splits_res)))
+history = csv.DictReader(io.StringIO(history_res))
+
+print('date,close,high,low')
+for record in history:
+    close = record['Close']
+    high = record['High']
+    low = record['Low']
+    date = record['Date']
+    if len(splits) > 0:
+        for split in splits:
+            if date >= split['Date']:
+                print('{},{},{},{}'.format(date, close, high, low))
+    else:
+        print('{},{},{},{}'.format(date, close, high, low))
